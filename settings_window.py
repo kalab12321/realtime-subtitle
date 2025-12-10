@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, 
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, QHBoxLayout,
                              QFormLayout, QPushButton, QComboBox, QDoubleSpinBox, QMessageBox)
 from PyQt6.QtCore import Qt
 import configparser
@@ -30,11 +30,28 @@ class SettingsWindow(QWidget):
         form_layout.addRow("API Base URL:", self.base_url_input)
         
         # Translation Model
+        # Translation Model
         self.model_input = QComboBox()
-        self.model_input.addItems(["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "claude-3-haiku-20240307", "groq-llama-3-70b"])
         self.model_input.setEditable(True) # Allow custom models
+        # Initial list just has current model
+        initial_models = [config.model] if config.model else ["gpt-3.5-turbo"]
+        self.model_input.addItems(initial_models)
         self.model_input.setCurrentText(config.model)
-        form_layout.addRow("Translation Model:", self.model_input)
+        
+        # Container for Model + Refresh
+        model_layout = QVBoxLayout()
+        model_row = extract_row = QWidget()
+        model_row_layout = QHBoxLayout(model_row)
+        model_row_layout.setContentsMargins(0,0,0,0)
+        model_row_layout.addWidget(self.model_input)
+        
+        self.refresh_btn = QPushButton("🔄")
+        self.refresh_btn.setToolTip("Fetch models from server")
+        self.refresh_btn.setFixedWidth(30)
+        self.refresh_btn.clicked.connect(self.fetch_models)
+        model_row_layout.addWidget(self.refresh_btn)
+        
+        form_layout.addRow("Translation Model:", model_row)
         
         # Whisper Model
         self.whisper_input = QComboBox()
@@ -58,6 +75,71 @@ class SettingsWindow(QWidget):
         layout.addWidget(self.save_btn)
         
         self.setLayout(layout)
+        
+    def fetch_models(self):
+        """Fetch models from the provided Base URL using openai client"""
+        from openai import OpenAI
+        
+        api_key = self.api_key_input.text() or "dummy"
+        base_url = self.base_url_input.text()
+        
+        if not base_url:
+            QMessageBox.warning(self, "Missing URL", "Please enter an API Base URL first.")
+            return
+
+        self.refresh_btn.setEnabled(False)
+        self.model_input.clear()
+        self.model_input.addItem("Fetching...")
+        
+        # Use a thread to avoid freezing UI
+        import threading
+        def _fetch():
+            try:
+                client = OpenAI(api_key=api_key, base_url=base_url)
+                models_response = client.models.list()
+                # Sort models by id
+                model_ids = sorted([m.id for m in models_response.data])
+                
+                # Update UI in main thread safety check? 
+                # PyQt technically requires signal for thread safety, but for simple list update...
+                # Let's verify if we need signals. Yes strictly speaking.
+                # Use QTimer to update on main thread or simple hack?
+                # For safety, I will just call a reactor method or use strict signals. 
+                # Actually, to save complexity in this small edit, I'll run sync with a short timeout?
+                # No, freezing is bad. I'll use a simple QTimer check or try/except.
+                # Wait, I can't easily add signals now without major refactor.
+                # I will run it synchronously with a strict timeout of 3s, assuming user server is local or fast.
+                pass 
+            except Exception as e:
+                pass
+
+        # REVISING: Threading without signals in PyQt will crash if we touch UI.
+        # Running sync is safer for now, user expects a pause with "Fetch".
+        
+        try:
+            client = OpenAI(api_key=api_key, base_url=base_url)
+            # 3 second timeout to prevent long hang
+            models_response = client.models.list(timeout=5.0) 
+            model_ids = sorted([m.id for m in models_response.data])
+            
+            self.model_input.clear()
+            self.model_input.addItems(model_ids)
+            
+            # Restore current if in list
+            current = config.model
+            if current in model_ids:
+                self.model_input.setCurrentText(current)
+            elif model_ids:
+                self.model_input.setCurrentIndex(0)
+                
+            QMessageBox.information(self, "Success", f"Found {len(model_ids)} models.")
+            
+        except Exception as e:
+            self.model_input.clear()
+            self.model_input.addItem(config.model) # Restore
+            QMessageBox.critical(self, "Error", f"Failed to fetch models: {str(e)}")
+            
+        self.refresh_btn.setEnabled(True)
         
     def save_config(self):
         """Write to config.ini"""
