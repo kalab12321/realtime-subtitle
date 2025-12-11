@@ -26,7 +26,7 @@ https://github.com/Vanyoo/realtime-subtitle/raw/refs/heads/master/demo/demo%20sc
    ```bash
    pip install -r requirements.txt
    ```
-   ```
+   
    *(Ensure you have `PyQt6`, `sounddevice`, `numpy`, `openai`, `watchdog` installed)*
 
    **🪟 Windows Users**:
