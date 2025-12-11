@@ -273,19 +273,14 @@ def signal_handler(sig, frame):
     print("\n[Main] Ctrl-C received, force killing...")
     os._exit(0)
 
-def main():
+def start_overlay_session():
+    """Start the overlay and pipeline without blocking (for use in Dashboard)"""
     global _pipeline, _app
-    
-    # Set up signal handler for Ctrl-C
-    signal.signal(signal.SIGINT, signal_handler)
-    
-    _app = QApplication(sys.argv)
     
     # Initialize Overlay Window
     window = OverlayWindow(
         display_duration=config.display_duration,
         window_width=config.window_width
-        # window_height is omitted to let it default to 100% screen height
     )
     window.show()
     
@@ -295,20 +290,36 @@ def main():
     # Connect signals
     _pipeline.signals.update_text.connect(window.update_text)
     
+    # Start pipeline
+    _pipeline.start()
+    
+    return window, _pipeline
+
+def main():
+    global _pipeline, _app
+    
+    # Set up signal handler for Ctrl-C
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    _app = QApplication.instance()
+    if not _app:
+        _app = QApplication(sys.argv)
+    
+    # Start session
+    win, pipe = start_overlay_session()
+    
     # Timer to let Python interpreter handle signals (Ctrl-C)
     timer = QTimer()
     timer.start(200)
     timer.timeout.connect(lambda: None)
-    
-    # Start pipeline
-    _pipeline.start()
     
     try:
         sys.exit(_app.exec())
     except SystemExit:
         pass
     finally:
-        _pipeline.stop()
+        if _pipeline:
+            _pipeline.stop()
 
 if __name__ == "__main__":
     main()

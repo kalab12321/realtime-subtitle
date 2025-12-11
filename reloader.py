@@ -24,7 +24,7 @@ class RestartHandler(FileSystemEventHandler):
 
 def run_app():
     # Run main.py as a subprocess
-    return subprocess.Popen([sys.executable, "main.py"])
+    return subprocess.Popen([sys.executable, "launcher.py"])
 
 def main():
     print("[Reloader] Starting development monitor...")
@@ -61,10 +61,16 @@ def main():
     try:
         while True:
             time.sleep(1)
-            # Check if process died (e.g. syntax error)
+            # Check if process died
             if process.poll() is not None:
-                # If it crashed, we just wait for a file change to restart it
-                pass
+                # If clean exit (0), we quit the reloader too
+                if process.returncode == 0:
+                    print("[Reloader] App exited cleanly.")
+                    observer.stop()
+                    break
+                # If crash (non-zero), we wait for file change
+                else:
+                    pass
     except KeyboardInterrupt:
         observer.stop()
         if process:

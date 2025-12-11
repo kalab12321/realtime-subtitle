@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import (QApplication, QWidget, QTextEdit, QVBoxLayout, QGraphicsDropShadowEffect, 
                              QSizeGrip, QHBoxLayout, QScrollArea, QLabel, QFrame)
-from PyQt6.QtCore import Qt, QPoint, QTimer
+from PyQt6.QtCore import Qt, QPoint, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QPalette
-from settings_window import SettingsWindow
+
 from ctypes import c_void_p
 import time
 
@@ -116,6 +116,8 @@ class ResizeHandle(QLabel):
         self.startPos = None
 
 class OverlayWindow(QWidget):
+    stop_requested = pyqtSignal()
+
     def __init__(self, display_duration=None, window_width=400, window_height=None):
         super().__init__()
         # display_duration is not really used in log mode, but kept for compatibility
@@ -211,24 +213,29 @@ class OverlayWindow(QWidget):
         
         grip_layout.addWidget(self.save_btn)
         
-        # Settings Button
-        self.settings_btn = QPushButton("⚙️")
-        self.settings_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.settings_btn.setFixedSize(30, 30)
-        self.settings_btn.setStyleSheet("""
+        grip_layout.addWidget(self.save_btn)
+        
+        # Stop Button
+        self.stop_btn = QPushButton("⏹")
+        self.stop_btn.setToolTip("Stop Translator")
+        self.stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.stop_btn.setFixedSize(30, 30)
+        self.stop_btn.setStyleSheet("""
             QPushButton {
-                background-color: rgba(255, 255, 255, 50);
+                background-color: rgba(243, 139, 168, 150);
                 color: white;
                 border-radius: 15px;
                 border: none;
-                font-size: 16px;
+                font-size: 14px;
             }
             QPushButton:hover {
-                background-color: rgba(255, 255, 255, 100);
+                background-color: rgba(243, 139, 168, 200);
             }
         """)
-        self.settings_btn.clicked.connect(self._open_settings)
-        grip_layout.addWidget(self.settings_btn)
+        self.stop_btn.clicked.connect(self.stop_requested.emit)
+        grip_layout.addWidget(self.stop_btn)
+        
+        grip_layout.addStretch()
         
         grip_layout.addStretch()
         
@@ -343,13 +350,7 @@ class OverlayWindow(QWidget):
         except Exception as e:
             print(f"[Overlay] Error saving transcript: {e}")
 
-    def _open_settings(self):
-        """Open the settings window"""
-        if not hasattr(self, 'settings_window') or not self.settings_window.isVisible():
-            self.settings_window = SettingsWindow()
-            self.settings_window.show()
-            self.settings_window.raise_()
-            self.settings_window.activateWindow()
+
 
     # Window Moving Logic (Resize is handled by ResizeHandle widget)
     def mousePressEvent(self, event):
