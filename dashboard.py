@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QFrame, QComboBox, QLineEdit, 
                              QTabWidget, QSpinBox, QDoubleSpinBox, QGridLayout,
-                             QScrollArea, QSizePolicy, QSpacerItem, QFormLayout, QApplication)
+                             QScrollArea, QSizePolicy, QSpacerItem, QFormLayout, QApplication,
+                             QMessageBox, QTextEdit, QDialog)
 from PyQt6.QtCore import Qt, QSize, pyqtSignal, QThread
 from PyQt6.QtGui import QFont, QIcon, QColor
 import sys
@@ -110,6 +111,7 @@ class Dashboard(QWidget):
         
         self.init_home_tab()
         self.init_audio_tab()
+        self.init_device_manager_tab()
         self.init_transcription_tab()
         self.init_translation_tab()
         
@@ -200,6 +202,292 @@ class Dashboard(QWidget):
         
         tab.setLayout(layout)
         self.tabs.addTab(tab, "🎤 Audio")
+
+    def init_device_manager_tab(self):
+        """Audio Device Manager - Create/Manage Multi-Output Devices"""
+        tab = QWidget()
+        layout = QVBoxLayout()
+        layout.setSpacing(15)
+        
+        # Header
+        header = QLabel("Audio Device Manager")
+        header.setStyleSheet("font-size: 16px; font-weight: bold; color: #fab387;")
+        layout.addWidget(header)
+        
+        info = QLabel("Create multi-output devices to capture system audio + hear it through speakers")
+        info.setStyleSheet("color: #6c7086; font-size: 12px; font-style: italic;")
+        layout.addWidget(info)
+        
+        # Available Devices List
+        devices_label = QLabel("Available Output Devices:")
+        layout.addWidget(devices_label)
+        
+        self.output_devices_list = QComboBox()
+        self.output_devices_list.setMinimumHeight(30)
+        layout.addWidget(self.output_devices_list)
+        
+        # Virtual Device List
+        virtual_label = QLabel("Virtual/BlackHole Devices:")
+        layout.addWidget(virtual_label)
+        
+        self.virtual_devices_list = QComboBox()
+        self.virtual_devices_list.setMinimumHeight(30)
+        layout.addWidget(self.virtual_devices_list)
+        
+        # Buttons
+        btn_layout = QHBoxLayout()
+        
+        self.refresh_devices_btn = QPushButton("🔄 Refresh Devices")
+        self.refresh_devices_btn.clicked.connect(self.refresh_audio_devices)
+        btn_layout.addWidget(self.refresh_devices_btn)
+        
+        self.create_multi_output_btn = QPushButton("➕ Create Multi-Output Device")
+        self.create_multi_output_btn.setStyleSheet("""
+            background-color: #a6e3a1; color: #1e1e2e; font-weight: bold;
+        """)
+        self.create_multi_output_btn.clicked.connect(self.create_multi_output_device)
+        btn_layout.addWidget(self.create_multi_output_btn)
+        
+        layout.addLayout(btn_layout)
+        
+        # Set as Default Button
+        self.set_default_btn = QPushButton("🔊 Set Selected as Default Output")
+        self.set_default_btn.clicked.connect(self.set_default_output_device)
+        layout.addWidget(self.set_default_btn)
+        
+        # Status
+        self.device_status = QLabel("Ready")
+        self.device_status.setStyleSheet("color: #a6e3a1; font-style: italic; padding: 10px;")
+        layout.addWidget(self.device_status)
+        
+        # Help text
+        help_text = QLabel(
+            "<b>How to use:</b><br>"
+            "1. Select your speakers from 'Available Output Devices'<br>"
+            "2. Select BlackHole from 'Virtual Devices'<br>"
+            "3. Click 'Create Multi-Output Device'<br>"
+            "   • Audio MIDI Setup will open with instructions<br>"
+            "   • Follow the step-by-step guide in the terminal/console<br>"
+            "4. The new device lets you hear audio AND capture it!<br>"
+            "<br><i>Note: Accessibility permissions may be required for automation.<br>"
+            "Without permissions, you'll see manual instructions (very easy!).</i>"
+        )
+        help_text.setWordWrap(True)
+        help_text.setStyleSheet("background-color: #313244; padding: 10px; border-radius: 5px; font-size: 12px;")
+        layout.addWidget(help_text)
+        
+        layout.addStretch()
+        
+        tab.setLayout(layout)
+        self.tabs.addTab(tab, "🔧 Device Manager")
+        
+        # Initial population
+        self.refresh_audio_devices()
+
+    def refresh_audio_devices(self):
+        """Refresh the list of audio devices"""
+        try:
+            import platform
+            if platform.system() != "Darwin":
+                self.device_status.setText("⚠️ Device Manager only available on macOS")
+                self.device_status.setStyleSheet("color: #fab387;")
+                return
+            
+            from audio_device_manager import AudioDeviceManager
+            manager = AudioDeviceManager()
+            
+            # Get output devices
+            output_devices = manager.get_output_devices()
+            self.output_devices_list.clear()
+            for device in output_devices:
+                self.output_devices_list.addItem(f"{device['name']}", device['id'])
+            
+            # Get virtual/BlackHole devices
+            virtual_devices = manager.get_virtual_devices()
+            self.virtual_devices_list.clear()
+            if not virtual_devices:
+                self.virtual_devices_list.addItem("No BlackHole device found - Please install it")
+                self.device_status.setText("⚠️ BlackHole not found. Install: brew install blackhole-2ch")
+                self.device_status.setStyleSheet("color: #fab387;")
+            else:
+                for device in virtual_devices:
+                    self.virtual_devices_list.addItem(f"{device['name']}", device['id'])
+                self.device_status.setText("✅ Devices loaded successfully")
+                self.device_status.setStyleSheet("color: #a6e3a1;")
+                
+        except ImportError:
+            self.device_status.setText("⚠️ Audio device management requires PyObjC (pip install pyobjc-framework-CoreAudio)")
+            self.device_status.setStyleSheet("color: #f38ba8;")
+        except Exception as e:
+            self.device_status.setText(f"❌ Error: {str(e)}")
+            self.device_status.setStyleSheet("color: #f38ba8;")
+    
+    def create_multi_output_device(self):
+        """Create a multi-output device combining speakers + BlackHole"""
+        try:
+            from audio_device_manager import AudioDeviceManager
+            manager = AudioDeviceManager()
+            
+            output_device_id = self.output_devices_list.currentData()
+            virtual_device_id = self.virtual_devices_list.currentData()
+            
+            if not output_device_id or not virtual_device_id:
+                self.device_status.setText("⚠️ Please select both devices")
+                self.device_status.setStyleSheet("color: #fab387;")
+                return
+            
+            # Show instruction dialog
+            self._show_multi_output_instructions()
+            
+            # Call the audio device manager to open Audio MIDI Setup
+            device_name = f"Translator Multi-Output"
+            success = manager.create_multi_output_device(
+                device_name,
+                [output_device_id, virtual_device_id],
+                silent=True  # Suppress console output, show GUI dialog instead
+            )
+            
+            if success:
+                self.device_status.setText(f"✅ Audio MIDI Setup opened - Follow the instructions!")
+                self.device_status.setStyleSheet("color: #a6e3a1;")
+                # Refresh after user has time to create the device
+                QTimer = __import__('PyQt6.QtCore', fromlist=['QTimer']).QTimer
+                QTimer.singleShot(3000, self.refresh_audio_devices)
+            else:
+                self.device_status.setText("❌ Failed to open Audio MIDI Setup")
+                self.device_status.setStyleSheet("color: #f38ba8;")
+                
+        except Exception as e:
+            self.device_status.setText(f"❌ Error: {str(e)}")
+            self.device_status.setStyleSheet("color: #f38ba8;")
+    
+    def _show_multi_output_instructions(self):
+        """Show a dialog with step-by-step instructions"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("🎵 Create Multi-Output Device - Instructions")
+        dialog.setMinimumSize(600, 500)
+        dialog.setStyleSheet(STYLESHEET)
+        
+        layout = QVBoxLayout()
+        
+        # Title
+        title = QLabel("📋 Step-by-Step Guide")
+        title.setStyleSheet("font-size: 18px; font-weight: bold; color: #89b4fa; padding: 10px;")
+        layout.addWidget(title)
+        
+        # Instructions text
+        instructions = QTextEdit()
+        instructions.setReadOnly(True)
+        instructions.setStyleSheet("""
+            QTextEdit {
+                background-color: #1e1e2e;
+                color: #cdd6f4;
+                border: 1px solid #45475a;
+                border-radius: 8px;
+                padding: 15px;
+                font-size: 13px;
+                line-height: 1.6;
+            }
+        """)
+        
+        output_device = self.output_devices_list.currentText()
+        virtual_device = self.virtual_devices_list.currentText()
+        
+        instructions_html = f"""
+        <div style='font-family: Arial, sans-serif;'>
+        <h3 style='color: #fab387;'>✨ Audio MIDI Setup is opening...</h3>
+        
+        <p style='color: #a6adc8;'><b>Follow these simple steps:</b></p>
+        
+        <div style='background: #313244; padding: 12px; border-radius: 6px; margin: 10px 0;'>
+        <p style='color: #89b4fa; font-weight: bold;'>👉 Step 1: Find the Plus Button</p>
+        <p>In the Audio MIDI Setup window, look at the <b>bottom-left corner</b>.<br>
+        Click the <span style='background: #45475a; padding: 2px 8px; border-radius: 3px;'>[+]</span> button.</p>
+        </div>
+        
+        <div style='background: #313244; padding: 12px; border-radius: 6px; margin: 10px 0;'>
+        <p style='color: #89b4fa; font-weight: bold;'>👉 Step 2: Create Multi-Output</p>
+        <p>From the menu that appears, select:<br>
+        <span style='color: #a6e3a1; font-weight: bold;'>“Create Multi-Output Device”</span></p>
+        </div>
+        
+        <div style='background: #313244; padding: 12px; border-radius: 6px; margin: 10px 0;'>
+        <p style='color: #89b4fa; font-weight: bold;'>👉 Step 3: Select Devices</p>
+        <p>Check the boxes for these devices:<br>
+        ✅ <span style='color: #f9e2af;'>{output_device}</span> (your speakers)<br>
+        ✅ <span style='color: #f9e2af;'>{virtual_device}</span> (for capturing)</p>
+        </div>
+        
+        <div style='background: #313244; padding: 12px; border-radius: 6px; margin: 10px 0;'>
+        <p style='color: #89b4fa; font-weight: bold;'>👉 Step 4: Configure Drift Correction</p>
+        <p><b style='color: #f38ba8;'>IMPORTANT:</b> Uncheck <b>“Drift Correction”</b> for <span style='color: #f9e2af;'>{output_device}</span><br>
+        (This allows you to hear the audio through your speakers)</p>
+        </div>
+        
+        <div style='background: #313244; padding: 12px; border-radius: 6px; margin: 10px 0;'>
+        <p style='color: #89b4fa; font-weight: bold;'>👉 Step 5: Set as Default Output</p>
+        <p>Go to <b>System Settings → Sound</b><br>
+        Set the new <span style='color: #a6e3a1;'>Multi-Output Device</span> as your output device.</p>
+        </div>
+        
+        <hr style='border: 1px solid #45475a; margin: 15px 0;'>
+        
+        <p style='color: #6c7086; font-style: italic;'>
+        💡 <b>Tip:</b> You only need to do this once! The device will persist across reboots.<br>
+        After setup, you'll hear audio normally while the translator captures it in real-time.
+        </p>
+        </div>
+        """
+        
+        instructions.setHtml(instructions_html)
+        layout.addWidget(instructions)
+        
+        # Close button
+        close_btn = QPushButton("✅ Got it!")
+        close_btn.setFixedHeight(40)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #a6e3a1;
+                color: #1e1e2e;
+                font-weight: bold;
+                font-size: 14px;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: #b4e4b4;
+            }
+        """)
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+        
+        dialog.setLayout(layout)
+        dialog.exec()
+    
+    def set_default_output_device(self):
+        """Set the selected device as system default output"""
+        try:
+            from audio_device_manager import AudioDeviceManager
+            manager = AudioDeviceManager()
+            
+            device_id = self.output_devices_list.currentData()
+            if not device_id:
+                self.device_status.setText("⚠️ Please select a device")
+                self.device_status.setStyleSheet("color: #fab387;")
+                return
+            
+            device_name = self.output_devices_list.currentText()
+            success = manager.set_default_output_device(device_id)
+            
+            if success:
+                self.device_status.setText(f"✅ Set '{device_name}' as default output")
+                self.device_status.setStyleSheet("color: #a6e3a1;")
+            else:
+                self.device_status.setText("❌ Failed to set default device")
+                self.device_status.setStyleSheet("color: #f38ba8;")
+                
+        except Exception as e:
+            self.device_status.setText(f"❌ Error: {str(e)}")
+            self.device_status.setStyleSheet("color: #f38ba8;")
 
     def init_transcription_tab(self):
         tab = QWidget()

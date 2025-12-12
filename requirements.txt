@@ -3,5 +3,6 @@ faster-whisper
 sounddevice
 numpy
 openai
+pyobjc-framework-CoreAudio; sys_platform == 'darwin'
 
 watchdog

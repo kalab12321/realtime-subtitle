@@ -61,7 +61,16 @@ else
     echo "  -> BlackHole is required to capture system audio (e.g., from games, meetings, videos)."
     echo "  -> Install via Homebrew: brew install blackhole-2ch"
     echo "  -> Or download from: https://existential.audio/blackhole/"
-    echo "  -> After installation, configure in System Settings > Sound or Audio MIDI Setup."
+    echo ""
+fi
+
+# 7. Optional: SwitchAudioSource for programmatic device switching
+if command -v SwitchAudioSource &> /dev/null; then
+    echo "  [OK] SwitchAudioSource found (for device management)."
+else
+    echo "  [INFO] SwitchAudioSource not found (optional)."
+    echo "  -> Install for better device management: brew install switchaudio-osx"
+    echo "  -> This enables programmatic audio device switching in the dashboard."
     echo ""
 fi
 
